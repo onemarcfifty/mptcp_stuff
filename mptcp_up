@@ -1,0 +1,31 @@
+#!/bin/sh
+# A script for setting up routing tables for MPTCP in the N950.
+
+# Copy this script into /etc/network/if-up.d/
+
+set -e
+
+env > /etc/network/if_up_env
+
+if [ "$IFACE" = lo -o "$MODE" != start ]; then
+        exit 0
+fi
+
+if [ -z $DEVICE_IFACE ]; then
+	exit 0
+fi
+
+# FIRST, make a table-alias
+if [ `grep $DEVICE_IFACE /etc/iproute2/rt_tables | wc -l` -eq 0 ]; then
+	NUM=`cat /etc/iproute2/rt_tables | wc -l`
+	echo "$NUM  $DEVICE_IFACE" >> /etc/iproute2/rt_tables
+fi
+	SUBNET=`echo $IP4_ADDRESS_0 | cut -d \   -f 1 | cut -d / -f 2`
+	IF_IP_ADDR=`echo $IP4_ADDRESS_0 | cut -d \   -f 1 | cut -d / -f 1`
+	ROUTER_ADDR=`echo $IP4_ADDRESS_0 | cut -d \   -f 2 `
+	IP4_ROUTE_NW=`echo $IP4_ROUTE_0 | cut -d \   -f 1 `
+
+	ip route add table $DEVICE_IFACE to $IP4_ROUTE_NW dev $DEVICE_IFACE scope link
+	ip route add table $DEVICE_IFACE default via $ROUTER_ADDR dev $DEVICE_IFACE
+	ip rule add from $IF_IP_ADDR table $DEVICE_IFACE
+
